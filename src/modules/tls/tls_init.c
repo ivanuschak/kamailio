@@ -43,9 +43,12 @@
 #include <string.h>
 #include <pthread.h>
 #include <openssl/ssl.h>
+#include <openssl/crypto.h>
 
 #include "../../core/dprint.h"
 #include "../../core/mem/shm_mem.h"
+#include "../../core/mem/shm.h"
+#include "../../core/mem/q_malloc.h"
 #include "../../core/tcp_init.h"
 #include "../../core/socket_info.h"
 #include "../../core/pt.h"
@@ -256,7 +259,8 @@ static void *ser_malloc(size_t size, const char *file, int line)
 #endif
 		s = backtrace2str(bt_buf, sizeof(bt_buf));
 		/* ugly hack: keep the bt inside the alloc'ed fragment */
-		p = _shm_malloc(size + s, file, "via ser_malloc", line);
+		//p = _shm_malloc(size + s, file, "via ser_malloc", line);
+		_shm_root.xmalloc(_shm_root.mem_block, size+s, file, "via ser_malloc", line, _SRC_MODULE_);
 		if(p == 0) {
 			LM_CRIT("tls - ser_malloc(%d)[%s:%d]==null, bt: %s\n", size, file,
 					line, bt_buf);
@@ -300,7 +304,8 @@ static void *ser_realloc(void *ptr, size_t size, const char *file, int line)
 			|| (random() % RAND_NULL_MALLOC)) {
 #endif
 		s = backtrace2str(bt_buf, sizeof(bt_buf));
-		p = _shm_realloc(ptr, size + s, file, "via ser_realloc", line);
+		//p = _shm_realloc(ptr, size + s, file, "via ser_realloc", line);
+		 p=_shm_root.xrealloc(_shm_root.mem_block, ptr, size+s, file, "via ser_realloc", line, _SRC_MODULE_);
 		if(p == 0) {
 			LM_CRIT("tls - ser_realloc(%p, %d)[%s:%d]==null, bt: %s\n", ptr,
 					size, file, line, bt_buf);
@@ -706,7 +711,7 @@ int tls_pre_init(void)
 	rf = NULL;
 	ff = NULL;
 #ifdef TLS_MALLOC_DBG
-	if(!CRYPTO_set_mem_ex_functions(ser_malloc, ser_realloc, ser_free)) {
+	if(!CRYPTO_set_mem_functions(ser_malloc, ser_realloc, ser_free)) {
 #else
 	if(!CRYPTO_set_mem_functions(ser_malloc, ser_realloc, ser_free)) {
 #endif
