@@ -167,7 +167,7 @@ int sock_cb(CURL *e, curl_socket_t s, int what, void *cbp, void *sockp)
 		/* if cell is NULL the handle has been removed by the event callback for timeout */
 		if(cell) {
 			cell_cmp = http_m_cell_lookup(e);
-			if (cell_cmp == cell) {
+			if(cell_cmp == cell) {
 				if(cell->evset && cell->ev) {
 					LM_DBG("freeing event %p\n", cell->ev);
 					event_del(cell->ev);
